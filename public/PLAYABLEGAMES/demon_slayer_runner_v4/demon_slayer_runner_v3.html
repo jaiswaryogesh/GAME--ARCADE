@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demon Slayer Runner</title>
+<style>
+  :root {
+    --ui: #fff;
+    --accent: #ff3c7b;
+    --shadow: rgba(0,0,0,.45);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; overflow: hidden;
+    background:#0a0a0a;
+    font-family: 'Trebuchet MS', system-ui, Arial, sans-serif;
+  }
+  canvas {
+    display: block; margin: 0 auto;
+    background: url('1000081373.jpg') repeat-x;
+    background-size: cover;
+    transition: background 0.3s ease-in-out;
+  }
+  #score {
+    position: fixed; top: 12px; left: 16px;
+    font-size: 24px; font-weight: 700;
+    color: var(--ui);
+    text-shadow: 0 0 6px var(--accent), 2px 2px 6px var(--shadow);
+    user-select: none;
+    transition: transform 0.2s;
+  }
+  /* Glow pulse on score */
+  #score.glow { transform: scale(1.1); }
+
+  /* Intro overlay */
+  #intro {
+    position: fixed; inset: 0;
+    background: radial-gradient(1000px 600px at 50% 0%, #000 0, #0b0b0b 40%, #000 100%);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px;
+    z-index: 5;
+    animation: fadeIn 1.2s ease;
+  }
+  #intro video {
+    max-width: 92vw; max-height: 60vh;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(255,60,123,.5);
+    background: #000;
+  }
+  .controls { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  button {
+    border: 0; padding: 12px 22px; border-radius: 999px;
+    font-weight: 700; font-size: 15px;
+    background: var(--accent); color: #fff;
+    box-shadow: 0 0 12px rgba(255,60,123,.6);
+    cursor: pointer; transition: 0.25s;
+  }
+  button:hover { transform: scale(1.05); box-shadow: 0 0 18px rgba(255,60,123,.9); }
+  button.secondary {
+    background: #e5e7eb; color: #111;
+    box-shadow: 0 4px 12px rgba(0,0,0,.3);
+  }
+  .hint { color: #bbb; font-size: 14px; text-shadow: 0 1px 2px #000; }
+
+  /* Game Over styling */
+  .game-over {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-size: 48px; font-weight: 800;
+    color: var(--accent);
+    text-shadow: 0 0 16px var(--accent), 0 0 28px #fff;
+    animation: fadeIn 1s ease forwards;
+  }
+  .retry { font-size: 20px; margin-top: 12px; color: #fff; }
+
+  /* Animations */
+  @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+  @keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    50% { transform: translateX(6px); }
+    75% { transform: translateX(-6px); }
+    100% { transform: translateX(0); }
+  }
+</style>
+</head>
+<body>
+<div id="score">Score: 0 | Level: 1</div>
+<canvas id="gameCanvas"></canvas>
+
+<div id="intro">
+  <video id="introVideo" muted playsinline preload="auto">
+    <source src="opening.mp4" type="video/mp4">
+  </video>
+  <div class="controls">
+    <button id="playBtn">▶ Play Intro</button>
+    <button id="skipBtn" class="secondary">⏭ Skip</button>
+  </div>
+  <div class="hint">Jump: Space / ↑ / Tap · Retry: Enter</div>
+</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+
+let score = 0;
+let gameSpeed = 6;
+let gameOver = false;
+let health = 3;
+let level = 1;
+let started = false;
+let bgOffset = 0;
+
+// Load assets
+const playerImg = new Image(); playerImg.src = "tanjiro.png";
+const heartImg = new Image(); heartImg.src = "heart.png";
+
+function endGame() {
+    gameOver = true;
+    if (window.parent) {
+        // This is the updated part, identical to the Flappy Bird example's logic
+        window.parent.postMessage({
+            type: "GAME_SCORE",
+            game: "Demon Slayer",
+            score: score,
+            player: "Guest"
+        }, "*");
+    }
+}
+
+const obstacleSources = ["akaza.png","demon1.png","demon2.png","demon3.png"];
+const obstacleImgs = obstacleSources.map(s => { const i=new Image(); i.src=s; return i; });
+
+const playerSize = Math.min(72, canvas.height * 0.1);
+const player = {
+  x: 60, y: canvas.height-156, width: playerSize, height: playerSize,
+  dy: 0, gravity: 0.58, jumpPower: -11.5, grounded: true, runPhase: 0
+};
+
+let obstacles = [];
+let spawnTimer = 0, spawnInterval = 90;
+
+function spawnObstacle() {
+  const size = Math.min(72, canvas.height*0.1);
+  obstacles.push({
+    x: canvas.width, y: canvas.height-126, width: size, height: size,
+    img: obstacleImgs[(level-1)%obstacleImgs.length]
+  });
+}
+
+function restartGame() {
+  score=0; gameSpeed=6; gameOver=false; health=3; level=1;
+  spawnTimer=0; spawnInterval=90; obstacles=[];
+  player.y = canvas.height-156; player.dy=0; player.grounded=true;
+  started=true;
+  document.querySelector(".game-over")?.remove();
+  requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener("keydown", e=>{
+  if((e.code==="Space"||e.code==="ArrowUp") && player.grounded && started){
+    player.dy=player.jumpPower; player.grounded=false;
+  }
+  if(e.code==="Enter" && gameOver) restartGame();
+});
+document.addEventListener("touchstart", ()=>{
+  if(player.grounded && started){
+    player.dy=player.jumpPower; player.grounded=false;
+  }
+});
+
+// Intro controls
+const intro=document.getElementById("intro");
+const video=document.getElementById("introVideo");
+document.getElementById("playBtn").addEventListener("click", async()=>{
+  try{ await video.play(); }catch(e){}
+});
+document.getElementById("skipBtn").addEventListener("click", ()=>{
+  video.pause(); startGame();
+});
+video.addEventListener("ended", startGame);
+
+function startGame(){
+  intro.style.display="none";
+  started=true;
+  requestAnimationFrame(gameLoop);
+}
+
+// Game loop
+function gameLoop(){
+  bgOffset=(bgOffset+(gameSpeed-2))%canvas.width;
+  canvas.style.backgroundPositionX=`-${bgOffset}px`;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(!started){ requestAnimationFrame(gameLoop); return; }
+  if(gameOver){
+    if(!document.querySelector(".game-over")){
+      const go=document.createElement("div");
+      go.className="game-over";
+      go.innerHTML="GAME OVER<div class='retry'>Press Enter to Retry</div>";
+      document.body.appendChild(go);
+    }
+    return;
+  }
+
+  // Physics
+  player.y+=player.dy;
+  if(!player.grounded) player.dy+=player.gravity;
+  const groundY=canvas.height-156;
+  if(player.y>=groundY){ player.y=groundY; player.dy=0; player.grounded=true; }
+  if(player.grounded) player.runPhase+=0.25;
+  const drawY=player.y+(player.grounded?Math.sin(player.runPhase)*2:0);
+  const size=Math.min(72,canvas.height*0.1);
+  ctx.drawImage(playerImg,player.x,drawY,size,size);
+
+  // Obstacles
+  spawnTimer++;
+  if(spawnTimer>Math.max(40,spawnInterval-level*2)){ spawnObstacle(); spawnTimer=0; }
+  for(let i=0;i<obstacles.length;i++){
+    const o=obstacles[i]; o.x-=gameSpeed;
+    ctx.drawImage(o.img,o.x,o.y,size,size);
+    if(player.x<o.x+size && player.x+size>o.x && drawY<o.y+size && drawY+size>o.y){
+      health--; obstacles.splice(i,1); i--;
+      document.body.style.animation="shake 0.4s"; // Shake effect
+      setTimeout(()=>{document.body.style.animation="";},400);
+      if(health<=0){ endGame(); }
+    }
+  }
+  obstacles=obstacles.filter(o=>o.x+o.width>0);
+
+  // Score
+  score++;
+  scoreEl.textContent=`Score: ${score} | Level: ${level}`;
+  if(score%100===0){ scoreEl.classList.add("glow"); setTimeout(()=>scoreEl.classList.remove("glow"),300); }
+
+  // Hearts
+  const heartSize=Math.min(28,canvas.height*0.03);
+  const heartSpacing=Math.min(34,canvas.height*0.04);
+  for(let i=0;i<health;i++){ ctx.drawImage(heartImg,12+i*heartSpacing,46,heartSize,heartSize); }
+
+  // Level up
+  if(score%500===0){
+    level++; gameSpeed+=1;
+    const popup=document.createElement("div");
+    popup.textContent=`LEVEL ${level}!`;
+    popup.style.position="fixed"; popup.style.top="40%"; popup.style.left="50%";
+    popup.style.transform="translate(-50%,-50%)"; popup.style.fontSize="42px";
+    popup.style.color="var(--accent)"; popup.style.fontWeight="900";
+    popup.style.textShadow="0 0 18px var(--accent), 0 0 28px #fff";
+    popup.style.animation="fadeIn 0.6s ease"; document.body.appendChild(popup);
+    setTimeout(()=>popup.remove(),1200);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+window.addEventListener("resize", ()=>{ resizeCanvas(); player.y=canvas.height-156; });
+window.addEventListener("load", resizeCanvas);
+</script>
+</body>
+</html>

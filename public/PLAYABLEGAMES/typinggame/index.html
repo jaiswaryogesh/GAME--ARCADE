@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBER TYPING CHALLENGE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #0a0a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: #00ff00;
+            background-image:
+                radial-gradient(circle at 15% 30%, rgba(0, 255, 255, 0.1) 0%, transparent 25%),
+                radial-gradient(circle at 85% 70%, rgba(255, 0, 255, 0.1) 0%, transparent 25%);
+        }
+
+        .game-container {
+            background-color: rgba(0, 5, 10, 0.9);
+            border-radius: 5px;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3),
+                        inset 0 0 10px rgba(0, 100, 255, 0.2);
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #00ffff;
+            margin-bottom: 30px;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.7);
+            font-family: 'Share Tech Mono', monospace;
+            letter-spacing: 2px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+
+        .word-display {
+            font-size: 2rem;
+            margin: 30px 0;
+            letter-spacing: 3px;
+            color: #00ff00;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            border: 1px solid #00ffff;
+            border-radius: 0;
+            margin-bottom: 20px;
+            text-align: center;
+            transition: all 0.3s;
+            background: rgba(0, 10, 20, 0.7);
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #ff00ff;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+
+        .btn {
+            background-color: transparent;
+            color: #00ffff;
+            border: 1px solid #00ffff;
+            padding: 12px 25px;
+            font-size: 1rem;
+            border-radius: 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            background-color: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            color: #ffffff;
+        }
+
+        .game-over {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-over h2 {
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+
+        .restart-btn {
+            background-color: #2ecc71;
+        }
+
+        .restart-btn:hover {
+            background-color: #27ae60;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background-color: #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff, #ff00ff);
+            width: 100%;
+            transition: width 0.3s;
+        }
+
+        .mode-selector {
+            margin-bottom: 20px;
+        }
+        
+        .mode-btn {
+            margin: 0 5px;
+            padding: 8px 15px;
+        }
+        
+        .mode-btn.active {
+            background-color: #00ffff;
+            color: #0a0a1a;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .paragraph-display {
+            background-color: rgba(0, 5, 10, 0.7);
+            padding: 20px;
+            border: 1px solid #00ffff;
+            border-radius: 0;
+            margin: 20px 0;
+            text-align: left;
+            max-height: 150px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        .correct {
+            color: #2ecc71;
+        }
+
+        .incorrect {
+            color: #e74c3c;
+        }
+
+        @media (max-width: 500px) {
+            .game-container {
+                padding: 20px;
+                width: 95%;
+            }
+
+            .word-display {
+                font-size: 1.5rem;
+                margin: 20px 0;
+            }
+
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>CYBER TYPING CHALLENGE</h1>
+        
+        <div class="stats">
+            <div>Time: <span id="time">60</span>s</div>
+            <div>Score: <span id="score">0</span></div>
+            <div>Mistakes: <span id="mistakes">0</span>/3</div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progress"></div>
+        </div>
+
+        <div class="mode-selector">
+            <button class="btn mode-btn active" id="word-mode">Words</button>
+            <button class="btn mode-btn" id="paragraph-mode">Paragraphs</button>
+        </div>
+        
+        <div class="word-display" id="word"></div>
+        <div class="paragraph-display" id="paragraph" style="display:none;"></div>
+
+        <input type="text" class="input-field" id="input" autocomplete="off" autofocus>
+        
+        <button class="btn" id="start-btn">Start Game</button>
+
+        <div class="game-over" id="game-over">
+            <h2>Game Over!</h2>
+            <p>Your score: <span id="final-score">0</span> WPM</p>
+            <button class="btn restart-btn" id="restart-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const words = [
+            'programming', 'javascript', 'developer', 'algorithm', 
+            'function', 'variable', 'console', 'iteration', 'cybernetic',
+            'firewall', 'protocol', 'database', 'encryption'
+        ];
+
+        const paragraphs = [
+            "[SYSTEM BOOT] Initializing typing sequence. Prepare for hack sequence...",
+            "[SECURITY BREACH] Access granted to mainframe. Bypassing firewalls...",
+            "[CRYPTO] Encrypting transmission. [0xFA254BCC] [0x3DF891A2]",
+            "[TERMINAL] [root@hacknet] ~$ Decrypt ciphertext E5 F2 A0..."
+        ];
+
+        const wordDisplay = document.getElementById('word');
+        const paragraphDisplay = document.getElementById('paragraph');
+        const inputField = document.getElementById('input');
+        const timeDisplay = document.getElementById('time');
+        const scoreDisplay = document.getElementById('score');
+        const mistakesDisplay = document.getElementById('mistakes');
+        const progressBar = document.getElementById('progress');
+        const startBtn = document.getElementById('start-btn');
+        const gameOverDiv = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const restartBtn = document.getElementById('restart-btn');
+        const wordModeBtn = document.getElementById('word-mode');
+        const paragraphModeBtn = document.getElementById('paragraph-mode');
+
+        let timeLeft = 60;
+        let score = 0;
+        let mistakes = 0;
+        let isPlaying = false;
+        let interval;
+        let currentWord = '';
+        let paragraphMode = false;
+        let totalCharsTyped = 0;
+
+        // Initialize the game
+        function init() {
+            timeLeft = 60;
+            score = 0;
+            mistakes = 0;
+            totalCharsTyped = 0;
+            isPlaying = true;
+            updateDisplay();
+            inputField.value = '';
+            inputField.disabled = false;
+            inputField.focus();
+            gameOverDiv.style.display = 'none';
+            startBtn.style.display = 'none';
+            showWord();
+            
+            clearInterval(interval);
+            interval = setInterval(() => {
+                if (isPlaying) {
+                    timeLeft--;
+                    updateDisplay();
+                    
+                    const progressPercent = (timeLeft / 60) * 100;
+                    progressBar.style.width = `${progressPercent}%`;
+                    
+                    if (timeLeft <= 0) {
+                        endGame();
+                    }
+                }
+            }, 1000);
+        }
+        
+        function showWord() {
+            inputField.value = '';
+            inputField.focus();
+
+            if (paragraphMode) {
+                const randomIndex = Math.floor(Math.random() * paragraphs.length);
+                currentWord = paragraphs[randomIndex];
+                wordDisplay.style.display = 'none';
+                paragraphDisplay.style.display = 'block';
+                
+                // Render paragraph with spans for each character
+                paragraphDisplay.innerHTML = currentWord.split('').map(char => `<span>${char}</span>`).join('');
+            } else {
+                const randomIndex = Math.floor(Math.random() * words.length);
+                currentWord = words[randomIndex];
+                wordDisplay.style.display = 'flex';
+                paragraphDisplay.style.display = 'none';
+                wordDisplay.textContent = currentWord;
+            }
+        }
+
+        function updateDisplay() {
+            timeDisplay.textContent = timeLeft;
+            scoreDisplay.textContent = score;
+            mistakesDisplay.textContent = `${mistakes}/3`;
+        }
+
+        inputField.addEventListener('input', (e) => {
+            if (!isPlaying) return;
+
+            const typedText = inputField.value;
+            totalCharsTyped++;
+
+            if (paragraphMode) {
+                const charSpans = paragraphDisplay.querySelectorAll('span');
+                let allCorrect = true;
+                typedText.split('').forEach((char, index) => {
+                    if (index < charSpans.length) {
+                        let correctChar = currentWord[index];
+                        if (char === correctChar) {
+                            charSpans[index].className = 'correct';
+                        } else {
+                            charSpans[index].className = 'incorrect';
+                            allCorrect = false;
+                        }
+                    }
+                });
+
+                // Reset styles for characters not yet typed
+                for (let i = typedText.length; i < charSpans.length; i++) {
+                     charSpans[i].className = '';
+                }
+
+                if (typedText.length === currentWord.length && allCorrect) {
+                    score++;
+                    updateDisplay();
+                    setTimeout(showWord, 300);
+                }
+            } else { // Word mode
+                if (typedText.trim() === currentWord) {
+                    score++;
+                    updateDisplay();
+                    setTimeout(showWord, 300);
+                }
+            }
+        });
+
+        inputField.addEventListener('keydown', (e) => {
+            if (!isPlaying) return;
+            
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (inputField.value !== currentWord) {
+                    mistakes++;
+                    updateDisplay();
+                    if (mistakes >= 3) {
+                        endGame();
+                        return;
+                    }
+                }
+                showWord();
+            }
+        });
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(interval);
+            inputField.disabled = true;
+
+            const timeSpent = 60 - timeLeft;
+            const wpm = Math.round((totalCharsTyped / 5) / (timeSpent / 60)) || 0;
+            
+            finalScoreDisplay.textContent = wpm;
+            gameOverDiv.style.display = 'flex';
+            
+            // Send score to parent frame
+            if (window.parent) {
+                window.parent.postMessage({
+                    type: "GAME_SCORE",
+                    game: "Cyber Typing",
+                    score: wpm, // The score is the WPM
+                    player: "Guest"
+                }, "*");
+            }
+        }
+
+        startBtn.addEventListener('click', init);
+        restartBtn.addEventListener('click', init);
+        
+        wordModeBtn.addEventListener('click', () => {
+            if (isPlaying) return;
+            paragraphMode = false;
+            wordModeBtn.classList.add('active');
+            paragraphModeBtn.classList.remove('active');
+            wordDisplay.textContent = 'Type the word!';
+        });
+
+        paragraphModeBtn.addEventListener('click', () => {
+            if (isPlaying) return;
+            paragraphMode = true;
+            paragraphModeBtn.classList.add('active');
+            wordModeBtn.classList.remove('active');
+            paragraphDisplay.textContent = 'Type the paragraph!';
+        });
+
+    </script>
+</body>
+</html>

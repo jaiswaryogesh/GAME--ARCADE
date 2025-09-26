@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jumble Word Puzzle - High Level Challenge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .game-header {
+            margin-bottom: 30px;
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .difficulty-selector {
+            margin-bottom: 20px;
+        }
+
+        .difficulty-btn {
+            background: #e2e8f0;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .difficulty-btn.active {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .jumbled-word {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #2d3748;
+            margin: 30px 0;
+            letter-spacing: 8px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hint {
+            background: #fff5f5;
+            border: 2px solid #fed7d7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #742a2a;
+            font-style: italic;
+        }
+
+        .input-section {
+            margin: 30px 0;
+        }
+
+        .answer-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            border: 3px solid #e2e8f0;
+            border-radius: 10px;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .answer-input:focus {
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .game-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn {
+            background: #48bb78;
+            color: white;
+        }
+
+        .submit-btn:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+
+        .hint-btn {
+            background: #ed8936;
+            color: white;
+        }
+
+        .hint-btn:hover {
+            background: #dd6b20;
+            transform: translateY(-2px);
+        }
+
+        .skip-btn {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .skip-btn:hover {
+            background: #c53030;
+            transform: translateY(-2px);
+        }
+
+        .shuffle-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .shuffle-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .feedback {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .feedback.correct {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 2px solid #9ae6b4;
+        }
+
+        .feedback.incorrect {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #fc8181;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            transition: width 0.5s ease;
+        }
+
+        .game-over {
+            background: #f7fafc;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .final-score {
+            font-size: 2rem;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .restart-btn {
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 20px;
+            }
+            
+            .jumbled-word {
+                font-size: 2rem;
+                letter-spacing: 4px;
+            }
+            
+            .button-group {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">🧩 Jumble Word Puzzle</h1>
+            <div class="difficulty-selector">
+                <button class="difficulty-btn" onclick="setDifficulty('easy')">Easy</button>
+                <button class="difficulty-btn" onclick="setDifficulty('medium')">Medium</button>
+                <button class="difficulty-btn active" onclick="setDifficulty('hard')">High Level</button>
+            </div>
+        </div>
+
+        <div class="game-stats">
+            <div class="stat">
+                <div class="stat-value" id="score">0</div>
+                <div class="stat-label">Score</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="level">1</div>
+                <div class="stat-label">Level</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="streak">0</div>
+                <div class="stat-label">Streak</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="timer">60</div>
+                <div class="stat-label">Time</div>
+            </div>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+
+        <div id="gameArea">
+            <div class="jumbled-word" id="jumbledWord">LOADING...</div>
+            
+            <div class="hint" id="hintArea" style="display: none;">
+                <strong>💡 Hint:</strong> <span id="hintText"></span>
+            </div>
+
+            <div class="input-section">
+                <input type="text" class="answer-input" id="answerInput" placeholder="Enter your answer here..." autocomplete="off">
+            </div>
+
+            <div class="button-group">
+                <button class="game-btn submit-btn" onclick="checkAnswer()">Submit Answer</button>
+                <button class="game-btn hint-btn" onclick="showHint()">Get Hint</button>
+                <button class="game-btn shuffle-btn" onclick="shuffleWord()">Shuffle</button>
+                <button class="game-btn skip-btn" onclick="skipWord()">Skip Word</button>
+            </div>
+
+            <div class="feedback" id="feedback" style="display: none;"></div>
+        </div>
+
+        <div id="gameOverArea" class="game-over" style="display: none;">
+            <h2>🎉 Game Complete!</h2>
+            <div class="final-score" id="finalScore">Final Score: 0</div>
+            <p id="performanceMessage">Great job!</p>
+            <button class="restart-btn" onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const gameData = {
+            easy: [
+                {word: "HOUSE", hint: "A place where people live", jumbled: "ESUOH"},
+                {word: "WATER", hint: "Essential liquid for life", jumbled: "RETAW"},
+                {word: "HAPPY", hint: "Feeling of joy", jumbled: "PPYHA"},
+                {word: "MUSIC", hint: "Sounds arranged in harmony", jumbled: "CIMUS"},
+                {word: "FRIEND", hint: "Someone you care about", jumbled: "DNEIRF"}
+            ],
+            medium: [
+                {word: "COMPUTER", hint: "Electronic device for processing data", jumbled: "RETUPMOC"},
+                {word: "ELEPHANT", hint: "Large gray mammal with trunk", jumbled: "TNAHPELE"},
+                {word: "RAINBOW", hint: "Colorful arc in the sky", jumbled: "WOBNIAR"},
+                {word: "KITCHEN", hint: "Room where food is prepared", jumbled: "NEHCTIK"},
+                {word: "BICYCLE", hint: "Two-wheeled vehicle", jumbled: "ELCYCIB"}
+            ],
+            hard: [
+                {word: "EXTRAORDINARY", hint: "Beyond what is normal or expected", jumbled: "YRANIDROARTXE"},
+                {word: "PHILOSOPHICAL", hint: "Related to the study of fundamental questions", jumbled: "LACIHPOSOLIHP"},
+                {word: "METAMORPHOSIS", hint: "Process of transformation", jumbled: "SISOHPROMATEM"},
+                {word: "SERENDIPITOUS", hint: "Occurring by happy chance", jumbled: "SUOTIPIDNERES"},
+                {word: "PERSPICACIOUS", hint: "Having keen insight or discernment", jumbled: "SUOICACIPSREP"},
+                {word: "QUINTESSENTIAL", hint: "Representing the perfect example", jumbled: "LAITNESSETNUIQ"},
+                {word: "JUXTAPOSITION", hint: "Placing things side by side for contrast", jumbled: "NOITISOPATXUJ"},
+                {word: "ONOMATOPOEIA", hint: "Words that imitate sounds", jumbled: "AIEOPOTAMONO"},
+                {word: "CHRYSANTHEMUM", hint: "Type of flowering plant", jumbled: "MUMEHTNASIRHC"},
+                {word: "BIOLUMINESCENT", hint: "Producing light through biological processes", jumbled: "TNECSENIMULOIB"}
+            ]
+        };
+
+        let currentDifficulty = 'hard';
+        let currentWordIndex = 0;
+        let score = 0;
+        let level = 1;
+        let streak = 0;
+        let timeLeft = 60;
+        let gameTimer;
+        let hintsUsed = 0;
+        let currentWords = [];
+        let hintShown = false;
+
+        function initGame() {
+            currentWords = [...gameData[currentDifficulty]];
+            shuffleArray(currentWords);
+            currentWordIndex = 0;
+            score = 0;
+            level = 1;
+            streak = 0;
+            timeLeft = currentDifficulty === 'hard' ? 90 : currentDifficulty === 'medium' ? 75 : 60;
+            hintsUsed = 0;
+            updateDisplay();
+            loadNextWord();
+            startTimer();
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function setDifficulty(difficulty) {
+            currentDifficulty = difficulty;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            restartGame();
+        }
+
+        function loadNextWord() {
+            if (currentWordIndex >= currentWords.length) {
+                endGame();
+                return;
+            }
+
+            const currentWord = currentWords[currentWordIndex];
+            document.getElementById('jumbledWord').textContent = currentWord.jumbled;
+            document.getElementById('answerInput').value = '';
+            document.getElementById('hintArea').style.display = 'none';
+            document.getElementById('feedback').style.display = 'none';
+            hintShown = false;
+            
+            updateProgress();
+        }
+
+        function shuffleWord() {
+            const currentWord = currentWords[currentWordIndex];
+            let shuffled = currentWord.word.split('').sort(() => Math.random() - 0.5).join('');
+            
+            while (shuffled === document.getElementById('jumbledWord').textContent) {
+                shuffled = currentWord.word.split('').sort(() => Math.random() - 0.5).join('');
+            }
+            
+            document.getElementById('jumbledWord').textContent = shuffled;
+        }
+
+        function showHint() {
+            if (!hintShown) {
+                const currentWord = currentWords[currentWordIndex];
+                document.getElementById('hintText').textContent = currentWord.hint;
+                document.getElementById('hintArea').style.display = 'block';
+                hintsUsed++;
+                hintShown = true;
+            }
+        }
+
+        function checkAnswer() {
+            const userAnswer = document.getElementById('answerInput').value.trim().toUpperCase();
+            const correctAnswer = currentWords[currentWordIndex].word;
+            const feedback = document.getElementById('feedback');
+
+            if (userAnswer === correctAnswer) {
+                let points = currentDifficulty === 'hard' ? 15 : currentDifficulty === 'medium' ? 10 : 5;
+                if (!hintShown) points += 5;
+                if (streak >= 3) points += 5;
+                
+                score += points;
+                streak++;
+                
+                feedback.textContent = `🎉 Correct! +${points} points`;
+                feedback.className = 'feedback correct';
+                feedback.style.display = 'block';
+                
+                setTimeout(() => {
+                    currentWordIndex++;
+                    if (currentWordIndex % 5 === 0 && currentWordIndex > 0) level++;
+                    loadNextWord();
+                }, 1500);
+                
+            } else {
+                streak = 0;
+                feedback.textContent = `❌ Incorrect! The answer was: ${correctAnswer}`;
+                feedback.className = 'feedback incorrect';
+                feedback.style.display = 'block';
+                
+                setTimeout(() => {
+                    currentWordIndex++;
+                    loadNextWord();
+                }, 2000);
+            }
+            
+            updateDisplay();
+        }
+
+        function skipWord() {
+            streak = 0;
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = `⏭️ Skipped! The answer was: ${currentWords[currentWordIndex].word}`;
+            feedback.className = 'feedback incorrect';
+            feedback.style.display = 'block';
+            
+            setTimeout(() => {
+                currentWordIndex++;
+                loadNextWord();
+                updateDisplay();
+            }, 1500);
+        }
+
+        function startTimer() {
+            clearInterval(gameTimer);
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('streak').textContent = streak;
+            document.getElementById('timer').textContent = timeLeft;
+        }
+
+        function updateProgress() {
+            const progress = (currentWordIndex / currentWords.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function endGame() {
+            clearInterval(gameTimer);
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('gameOverArea').style.display = 'block';
+            document.getElementById('finalScore').textContent = `Final Score: ${score}`;
+            
+            let message = '';
+            if (score >= 150) message = '🏆 Outstanding! You\'re a word puzzle master!';
+            else if (score >= 100) message = '🌟 Excellent work! Great vocabulary skills!';
+            else if (score >= 50) message = '👍 Good job! Keep practicing to improve!';
+            else message = '💪 Nice try! Practice makes perfect!';
+            
+            document.getElementById('performanceMessage').textContent = message;
+
+            // Send score to parent frame
+            if (window.parent) {
+                window.parent.postMessage({
+                    type: "GAME_SCORE",
+                    game: "Jumble Puzzle",
+                    score: score,
+                    player: "Guest"
+                }, "*");
+            }
+        }
+
+        function restartGame() {
+            clearInterval(gameTimer);
+            document.getElementById('gameArea').style.display = 'block';
+            document.getElementById('gameOverArea').style.display = 'none';
+            initGame();
+        }
+
+        document.getElementById('answerInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkAnswer();
+            }
+        });
+
+        initGame();
+    </script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ping Pong Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .game-container {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 900px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    .difficulty-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .difficulty-btn {
+      padding: 10px 20px;
+      border-radius: 20px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
+      min-width: 100px;
+    }
+    .easy { background: #4CAF50; }
+    .medium { background: #FF9800; }
+    .hard { background: #F44336; }
+    .difficulty-btn.active {
+      box-shadow: 0 0 10px white;
+      transform: scale(1.05);
+    }
+    .score-board {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+      background: rgba(0,0,0,0.2);
+      border-radius: 15px;
+      padding: 10px;
+    }
+    .score-item { text-align: center; }
+    .score-label { font-size: 0.9rem; opacity: 0.8; }
+    .score-value { font-size: 1.5rem; font-weight: bold; }
+    canvas {
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      border: 3px solid rgba(255,255,255,0.3);
+      display: block;
+      margin: auto;
+    }
+    .start-btn {
+      background: #00BCD4;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    .game-over {
+      background: rgba(244, 67, 54, 0.9);
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      display: none;
+    }
+    @media(max-width:768px) {
+      h1 { font-size: 2rem; }
+      canvas { width: 100%; max-width: 400px; height: 300px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>🏓 Ping Pong Master</h1>
+
+    <div class="difficulty-buttons">
+      <button class="difficulty-btn easy active" data-difficulty="easy">Easy</button>
+      <button class="difficulty-btn medium" data-difficulty="medium">Medium</button>
+      <button class="difficulty-btn hard" data-difficulty="hard">Hard</button>
+    </div>
+
+    <div class="score-board">
+      <div class="score-item">
+        <div class="score-label">Score</div>
+        <div class="score-value" id="currentScore">0</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">High Score</div>
+        <div class="score-value" id="highScore">0</div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">Difficulty</div>
+        <div class="score-value" id="currentDifficulty">Easy</div>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+    <div class="game-over" id="gameOver">
+      <h3>Game Over!</h3>
+      <p id="finalScore"></p>
+      <p id="newHighScore" style="display:none;">🎉 New High Score! 🎉</p>
+    </div>
+
+    <button class="start-btn" id="startBtn">Start Game</button>
+    <button class="start-btn" id="pauseBtn" style="display:none;">Pause</button>
+
+    <p style="margin-top:10px;font-size:0.9rem;opacity:0.7;">Use ↑/↓ or W/S to move paddle</p>
+  </div>
+
+  <script>
+    class PingPongGame {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.score = 0;
+        this.highScore = parseInt(localStorage.getItem('pongHighScore') || '0');
+        this.difficulty = 'easy';
+        this.running = false;
+        this.paused = false;
+        this.keys = {};
+
+        this.init();
+        this.addListeners();
+        this.updateDisplay();
+      }
+
+      init() {
+        this.ball = {
+          x: this.canvas.width / 2,
+          y: this.canvas.height / 2,
+          radius: 8,
+          speedX: 0,
+          speedY: 0,
+        };
+
+        this.player = {
+          x: 10, y: this.canvas.height/2 - 50,
+          width: 10, height: 100,
+        };
+
+        this.ai = {
+          x: this.canvas.width - 20,
+          y: this.canvas.height/2 - 50,
+          width: 10, height: 100,
+        };
+
+        this.resetBall();
+      }
+
+      getSettings() {
+        const config = {
+          easy: { speed: 4, aiSpeed: 3, reaction: 0.7 },
+          medium: { speed: 6, aiSpeed: 4, reaction: 0.8 },
+          hard: { speed: 8, aiSpeed: 5, reaction: 0.9 },
+        };
+        return config[this.difficulty];
+      }
+
+      resetBall() {
+        const { speed } = this.getSettings();
+        const angle = (Math.random() - 0.5) * Math.PI / 3;
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        this.ball.x = this.canvas.width / 2;
+        this.ball.y = this.canvas.height / 2;
+        this.ball.speedX = Math.cos(angle) * speed * dir;
+        this.ball.speedY = Math.sin(angle) * speed;
+      }
+
+      addListeners() {
+        document.querySelectorAll('.difficulty-btn').forEach(btn => {
+          btn.addEventListener('click', e => {
+            document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            this.difficulty = e.target.dataset.difficulty;
+            this.updateDisplay();
+            this.resetGame();
+          });
+        });
+
+        document.getElementById('startBtn').onclick = () => this.startGame();
+        document.getElementById('pauseBtn').onclick = () => this.togglePause();
+
+        document.addEventListener('keydown', e => this.keys[e.key.toLowerCase()] = true);
+        document.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
+      }
+
+      startGame() {
+        this.running = true;
+        this.paused = false;
+        this.score = 0;
+        this.resetBall();
+        this.updateDisplay();
+        document.getElementById('gameOver').style.display = 'none';
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('pauseBtn').style.display = 'inline-block';
+        this.loop();
+      }
+
+      togglePause() {
+        if (!this.running) return;
+        this.paused = !this.paused;
+        document.getElementById('pauseBtn').textContent = this.paused ? 'Resume' : 'Pause';
+        if (!this.paused) this.loop();
+      }
+
+      endGame() {
+        this.running = false;
+        let newHigh = false;
+        if (this.score > this.highScore) {
+          this.highScore = this.score;
+          localStorage.setItem('pongHighScore', this.highScore);
+          newHigh = true;
+        }
+        document.getElementById('finalScore').textContent = `Final Score: ${this.score}`;
+        document.getElementById('newHighScore').style.display = newHigh ? 'block' : 'none';
+        document.getElementById('gameOver').style.display = 'block';
+        document.getElementById('startBtn').style.display = 'inline-block';
+        document.getElementById('pauseBtn').style.display = 'none';
+        this.updateDisplay();
+      }
+
+      resetGame() {
+        this.running = false;
+        this.paused = false;
+        this.init();
+        this.draw();
+        document.getElementById('startBtn').style.display = 'inline-block';
+        document.getElementById('pauseBtn').style.display = 'none';
+      }
+
+      updateDisplay() {
+        document.getElementById('currentScore').textContent = this.score;
+        document.getElementById('highScore').textContent = this.highScore;
+        document.getElementById('currentDifficulty').textContent = this.difficulty.charAt(0).toUpperCase() + this.difficulty.slice(1);
+      }
+
+      loop() {
+        if (!this.running || this.paused) return;
+        this.update();
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+      }
+
+      update() {
+        const settings = this.getSettings();
+
+        // Player paddle
+        if (this.keys['arrowup'] || this.keys['w']) this.player.y -= 6;
+        if (this.keys['arrowdown'] || this.keys['s']) this.player.y += 6;
+        this.player.y = Math.max(0, Math.min(this.canvas.height - this.player.height, this.player.y));
+
+        // AI paddle
+        if (Math.random() < settings.reaction) {
+          const center = this.ai.y + this.ai.height / 2;
+          if (center < this.ball.y - 10) this.ai.y += settings.aiSpeed;
+          else if (center > this.ball.y + 10) this.ai.y -= settings.aiSpeed;
+          this.ai.y = Math.max(0, Math.min(this.canvas.height - this.ai.height, this.ai.y));
+        }
+
+        // Ball movement
+        this.ball.x += this.ball.speedX;
+        this.ball.y += this.ball.speedY;
+
+        if (this.ball.y <= this.ball.radius || this.ball.y >= this.canvas.height - this.ball.radius)
+          this.ball.speedY = -this.ball.speedY;
+
+        // Player paddle collision
+        if (this.ball.x < this.player.x + this.player.width + this.ball.radius &&
+            this.ball.y > this.player.y && this.ball.y < this.player.y + this.player.height &&
+            this.ball.speedX < 0) {
+          this.ball.speedX = -this.ball.speedX;
+        }
+
+        // AI paddle collision
+        if (this.ball.x > this.ai.x - this.ball.radius &&
+            this.ball.y > this.ai.y && this.ball.y < this.ai.y + this.ai.height &&
+            this.ball.speedX > 0) {
+          this.ball.speedX = -this.ball.speedX;
+        }
+
+        // Scoring
+        if (this.ball.x > this.canvas.width + this.ball.radius) {
+          this.score++;
+          this.updateDisplay();
+          this.resetBall();
+        }
+
+        // Game over
+        if (this.ball.x < -this.ball.radius) this.endGame();
+      }
+
+      draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.fillStyle = '#00BCD4';
+        ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
+        ctx.fillStyle = '#FF5722';
+        ctx.fillRect(this.ai.x, this.ai.y, this.ai.width, this.ai.height);
+        ctx.beginPath();
+        ctx.fillStyle = '#FFEB3B';
+        ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    window.onload = () => new PingPongGame();
+  </script>
+</body>
+</html>

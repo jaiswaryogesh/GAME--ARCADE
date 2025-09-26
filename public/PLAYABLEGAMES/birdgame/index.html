@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flappy Bird - Tailwind</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="m-0 p-0 bg-gradient-to-b from-sky-400 to-blue-100 flex flex-col justify-center items-center h-screen overflow-hidden">
+
+  <!-- Game Container -->
+  <div id="game-container" class="relative w-[350px] h-[600px] bg-sky-300 border-[3px] border-black rounded-md overflow-hidden">
+    
+    <!-- Bird -->
+    <div id="bird" class="absolute w-10 h-10 text-3xl text-center leading-10 z-10 select-none"><img src="flappybird0.png" alt=""></div>
+    
+    <!-- Score -->
+    <div id="score" class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-4 py-1 rounded-full font-bold text-lg z-20">
+      0
+    </div>
+    
+    <!-- Game Over Screen -->
+    <div id="game-over" class="hidden absolute inset-0 bg-black/70 text-white flex-col justify-center items-center text-center z-30">
+      <h2 class="text-2xl font-bold mb-2">Game Over!</h2>
+      <p>Your Score: <span id="final-score" class="font-semibold">0</span></p>
+      <button id="restart-btn" class="mt-4 bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded text-white font-bold">
+        Play Again
+      </button>
+    </div>
+
+    <!-- Ground -->
+    <div class="absolute bottom-0 w-full h-5 bg-green-400 border-t-2 border-green-700 z-10"></div>
+  </div>
+
+  <script>
+    const game = document.getElementById("game-container");
+    const bird = document.getElementById("bird");
+    const scoreEl = document.getElementById("score");
+    const gameOver = document.getElementById("game-over");
+    const finalScore = document.getElementById("final-score");
+    const restartBtn = document.getElementById("restart-btn");
+
+    let birdTop = 250, birdLeft = 50, velocity = 0;
+    const gravity = 0.4, jump = -8;
+    let score = 0, pipes = [], isGameOver = false;
+    let gameLoop, pipeTimer;
+
+    function startGame() {
+      birdTop = 250;
+      velocity = 0;
+      score = 0;
+      isGameOver = false;
+      scoreEl.textContent = score;
+      finalScore.textContent = 0;
+      gameOver.classList.add("hidden");
+
+      bird.style.top = birdTop + "px";
+      bird.style.left = birdLeft + "px";
+      document.querySelectorAll(".pipe").forEach(p => p.remove());
+      pipes = [];
+
+      gameLoop = requestAnimationFrame(update);
+      pipeTimer = setInterval(createPipe, 1500);
+    }
+
+    function update() {
+      if (isGameOver) return;
+
+      velocity += gravity;
+      birdTop += velocity;
+      bird.style.top = birdTop + "px";
+
+      // Move pipes
+      pipes.forEach(pipe => {
+        pipe.left -= 2;
+        pipe.topEl.style.left = pipe.left + "px";
+        pipe.bottomEl.style.left = pipe.left + "px";
+
+        if (!pipe.passed && pipe.left + 60 < birdLeft) {
+          score++;
+          scoreEl.textContent = score;
+          pipe.passed = true;
+        }
+
+        // Remove off-screen
+        if (pipe.left < -60) {
+          pipe.topEl.remove();
+          pipe.bottomEl.remove();
+        }
+      });
+
+      pipes = pipes.filter(pipe => pipe.left > -60);
+
+      checkCollision();
+      requestAnimationFrame(update);
+    }
+
+    function createPipe() {
+      if (isGameOver) return;
+
+      const gap = 150;
+      const min = 50;
+      const max = game.clientHeight - gap - 70;
+      const topHeight = Math.floor(Math.random() * (max - min) + min);
+      const bottomHeight = game.clientHeight - topHeight - gap - 20;
+
+      const topPipe = document.createElement("div");
+      topPipe.className = "pipe absolute bg-green-600 border-2 border-green-800 rounded-t z-5";
+      topPipe.style.height = topHeight + "px";
+      topPipe.style.width = "60px";
+      topPipe.style.left = game.clientWidth + "px";
+      topPipe.style.top = "0px";
+
+      const bottomPipe = document.createElement("div");
+      bottomPipe.className = "pipe absolute bg-green-600 border-2 border-green-800 rounded-b z-5";
+      bottomPipe.style.height = bottomHeight + "px";
+      bottomPipe.style.width = "60px";
+      bottomPipe.style.left = game.clientWidth + "px";
+      bottomPipe.style.bottom = "20px";
+
+      game.appendChild(topPipe);
+      game.appendChild(bottomPipe);
+
+      pipes.push({
+        left: game.clientWidth,
+        topEl: topPipe,
+        bottomEl: bottomPipe,
+        passed: false
+      });
+    }
+
+    function checkCollision() {
+      if (birdTop < 0 || birdTop + 40 > game.clientHeight - 20) {
+        return endGame();
+      }
+
+      const birdRect = bird.getBoundingClientRect();
+
+      for (let pipe of pipes) {
+        const topRect = pipe.topEl.getBoundingClientRect();
+        const bottomRect = pipe.bottomEl.getBoundingClientRect();
+
+        if (
+          birdRect.right > topRect.left &&
+          birdRect.left < topRect.right &&
+          birdRect.bottom > topRect.top &&
+          birdRect.top < topRect.bottom
+        ) {
+          return endGame();
+        }
+
+        if (
+          birdRect.right > bottomRect.left &&
+          birdRect.left < bottomRect.right &&
+          birdRect.bottom > bottomRect.top &&
+          birdRect.top < bottomRect.bottom
+        ) {
+          return endGame();
+        }
+      }
+    }
+
+    function endGame() {
+      isGameOver = true;
+      cancelAnimationFrame(gameLoop);
+      clearInterval(pipeTimer);
+      finalScore.textContent = score;
+      gameOver.classList.remove("hidden");
+      
+      // Send score to parent frame
+      if (window.parent) {
+        window.parent.postMessage({
+          type: "GAME_SCORE",
+          game: "Bird Game",
+          score: score,
+          player: "Guest"
+        }, "*");
+      }
+    }
+
+    function flap() {
+      if (isGameOver) return;
+      velocity = jump;
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") flap();
+    });
+    document.addEventListener("click", flap);
+    document.addEventListener("touchstart", flap);
+
+    restartBtn.addEventListener("click", startGame);
+
+    // Start the game
+    startGame();
+  </script>
+</body>
+</html>
