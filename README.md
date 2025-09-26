@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # GAME-ARCADE: A Web-Based Gaming Platform
 
 ## 1. Introduction
@@ -152,3 +153,6 @@ The GAME-ARCADE project successfully meets its core objectives, delivering a fun
 - **Admin Dashboard:** Create a password-protected admin panel where an administrator can easily add, update, or remove games from the platform without needing to modify the source code directly.
 - **Expanded Game Library:** Continuously add new and diverse games to keep the platform fresh and engaging for users.
 - **Standardized Game API:** Develop a simple JavaScript SDK or a standardized communication protocol (e.g., using `postMessage`) that game developers can use to integrate their games more deeply with the platform (e.g., for achievements, real-time score updates, etc.).
+=======
+# GAME--ARCADE
+>>>>>>> 5be7dadde2bc556b393f3eb9ac6293d2bf1e0a56
